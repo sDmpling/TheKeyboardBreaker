@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyboard Breaker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Hero/Menu Screen -->
+    <div id="heroScreen" class="hero-screen">
+        <div class="hero-container">
+            <h1 class="hero-title">🚂 KEYBOARD BREAKER 🚂</h1>
+            <p class="hero-subtitle">The Ultimate Multiplayer Key-Smashing Racing Game!</p>
+
+            <div class="hero-content">
+                <div class="menu-section">
+                    <h2>🎮 Choose Your Game Mode</h2>
+
+                    <!-- Game Mode Selection -->
+                    <div class="game-mode-selector">
+                        <button id="raceModeBtn" class="mode-btn active">
+                            🚂 Train Race
+                            <small>Spam keys to race to center</small>
+                        </button>
+                        <button id="battleModeBtn" class="mode-btn">
+                            🦈 Typing Shark Battle
+                            <small>Type words to attack enemies</small>
+                        </button>
+                    </div>
+
+                    <div class="menu-buttons">
+                        <button id="createRoomBtn" class="menu-btn create-btn">
+                            ➕ Create Room
+                        </button>
+                        <button id="joinRoomBtn" class="menu-btn join-btn">
+                            🚪 Join Room
+                        </button>
+                        <button id="quickPlayBtn" class="menu-btn quick-btn">
+                            ⚡ Quick Race
+                        </button>
+                    </div>
+                </div>
+
+                <div class="game-preview">
+                    <div class="preview-track">
+                        <div class="preview-circle"></div>
+                        <div class="preview-train">🚂</div>
+                        <div class="preview-center">🎯</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="how-to-play">
+                <h3>How to Play:</h3>
+                <div class="instructions-grid">
+                    <div class="instruction">
+                        <span class="icon">⌨️</span>
+                        <p>Spam any keyboard keys</p>
+                    </div>
+                    <div class="instruction">
+                        <span class="icon">🏃‍♂️</span>
+                        <p>Move your train faster</p>
+                    </div>
+                    <div class="instruction">
+                        <span class="icon">🏆</span>
+                        <p>First to center wins!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Creation Modal -->
+    <div id="createRoomModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>🏗️ Create New Room</h2>
+            <div class="form-group">
+                <label for="roomName">Room Name:</label>
+                <input type="text" id="roomName" placeholder="Epic Train Race" maxlength="30">
+            </div>
+            <div class="form-group">
+                <label for="playerName">Your Name:</label>
+                <input type="text" id="playerName" placeholder="Speed Racer" maxlength="20">
+            </div>
+            <div class="form-group">
+                <label for="maxPlayersSelect">Max Players:</label>
+                <select id="maxPlayersSelect">
+                    <option value="2">2 Players</option>
+                    <option value="4">4 Players</option>
+                    <option value="8">8 Players</option>
+                    <option value="15" selected>15 Players</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button id="confirmCreateRoom" class="btn primary">🚂 Create Room</button>
+                <button id="cancelCreateRoom" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Room Modal -->
+    <div id="joinRoomModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>🚪 Join Room</h2>
+            <div class="form-group">
+                <label for="roomCode">Room Code:</label>
+                <input type="text" id="roomCode" placeholder="ABC123" maxlength="6" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label for="joinPlayerName">Your Name:</label>
+                <input type="text" id="joinPlayerName" placeholder="Speed Racer" maxlength="20">
+            </div>
+            <div class="modal-buttons">
+                <button id="confirmJoinRoom" class="btn primary">🏃‍♂️ Join Room</button>
+                <button id="cancelJoinRoom" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Lobby Screen -->
+    <div id="lobbyScreen" class="lobby-screen hidden">
+        <div class="lobby-container">
+            <div class="lobby-header">
+                <h1 id="lobbyRoomName">Room: Epic Train Race</h1>
+                <div class="room-info">
+                    <span class="room-code">Room Code: <strong id="lobbyRoomCode">ABC123</strong></span>
+                    <span class="player-count">Players: <span id="lobbyPlayerCount">1</span>/<span id="lobbyMaxPlayers">15</span></span>
+                </div>
+            </div>
+
+            <div class="lobby-content">
+                <div class="players-waiting">
+                    <h2>🚂 Players in Lobby</h2>
+                    <div id="lobbyPlayersList" class="lobby-players"></div>
+                </div>
+
+                <div class="lobby-actions">
+                    <button id="startGameBtn" class="btn primary large hidden">🚀 Start Game</button>
+
+                    <!-- AI Controls (only visible to room owner) -->
+                    <div id="aiControls" class="ai-controls hidden">
+                        <h3>🤖 AI Players</h3>
+                        <div class="ai-buttons">
+                            <div class="difficulty-selector">
+                                <label for="aiDifficulty">Difficulty:</label>
+                                <select id="aiDifficulty">
+                                    <option value="easy">Easy</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            <button id="addAIBtn" class="btn primary small">➕ Add AI</button>
+                            <button id="removeAIBtn" class="btn secondary small">➖ Remove AI</button>
+                        </div>
+                    </div>
+
+                    <button id="leaveLobbyBtn" class="btn secondary">🚪 Leave Room</button>
+                    <div class="waiting-message">
+                        <p>Waiting for room creator to start the game...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lobby-chat">
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" placeholder="Type a message..." maxlength="100">
+                    <button id="sendChatBtn">📤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="game-container hidden">
+        <div class="game-header">
+            <h1>🚂 Keyboard Breaker 🚂</h1>
+            <div class="room-info-game">
+                <span id="gameRoomName">Room: Epic Race</span>
+                <button id="leaveGameBtn" class="btn small secondary">🚪 Leave</button>
+            </div>
+        </div>
+
+        <div class="game-info">
+            <div class="player-count">Players: <span id="playerCount">0</span>/<span id="maxPlayerCount">15</span></div>
+            <div class="game-status" id="gameStatus">Waiting for players...</div>
+        </div>
+
+        <div class="track-container">
+            <!-- Circular railroad track -->
+            <div class="railroad-track">
+                <!-- Railroad ties will be generated by CSS -->
+                <div class="track-circle outer-track"></div>
+                <div class="track-circle middle-track"></div>
+                <div class="track-circle inner-track"></div>
+
+                <!-- Center finish line -->
+                <div class="finish-center">🎯</div>
+
+                <!-- Players will be positioned here -->
+                <div id="playersContainer"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="instructions">
+                <h3>How to Play:</h3>
+                <p>🎮 Spam any keys on your keyboard to make your train move faster!</p>
+                <p>🔥 Fast key spamming slows down other players!</p>
+                <p>🏁 First to reach the center wins!</p>
+            </div>
+
+            <div class="game-stats">
+                <div class="key-counter">
+                    Keys pressed: <span id="keyCount">0</span>
+                </div>
+
+                <div class="speed-meter">
+                    Speed: <span id="speedMeter">0</span> km/h
+                </div>
+
+                <div class="sabotage-meter">
+                    🔥 Sabotage: <span id="sabotageLevel">0</span>%
+                </div>
+
+                <div class="slowdown-meter">
+                    ❄️ Slowed by: <span id="slowdownEffect">0</span>%
+                </div>
+            </div>
+        </div>
+
+        <div class="leaderboard">
+            <h3>🏆 Leaderboard</h3>
+            <ol id="leaderboardList"></ol>
+        </div>
+    </div>
+
+    <!-- Typing Battle Screen -->
+    <div id="battleScreen" class="battle-container hidden">
+        <div class="battle-header">
+            <h1>🦈 Typing Shark Battle 🦈</h1>
+            <div class="room-info-battle">
+                <span id="battleRoomName">Room: Shark Arena</span>
+                <button id="leaveBattleBtn" class="btn small secondary">🚪 Leave</button>
+            </div>
+        </div>
+
+        <div class="battle-stats">
+            <div class="players-battle-count">Players: <span id="battlePlayerCount">0</span>/<span id="battleMaxPlayers">8</span></div>
+            <div class="battle-status" id="battleStatus">Waiting for battle...</div>
+            <div class="battle-timer">Time: <span id="battleTimer">3:00</span></div>
+        </div>
+
+        <!-- Battle Arena -->
+        <div class="battle-arena">
+            <div class="battle-field">
+                <!-- Player health bars -->
+                <div id="playerHealthBars" class="health-bars-container"></div>
+
+                <!-- Word targets that appear for typing -->
+                <div id="wordTargets" class="word-targets-container"></div>
+
+                <!-- Battle animations and effects -->
+                <div id="battleEffects" class="battle-effects"></div>
+            </div>
+        </div>
+
+        <!-- Typing Input Area -->
+        <div class="typing-area">
+            <div class="current-word">
+                <label>Type any visible word above and hit Enter:</label>
+                <div id="currentWordDisplay" class="word-display">Type any visible word</div>
+            </div>
+            <input type="text" id="typingInput" class="typing-input" placeholder="Type any word above..." autocomplete="off" spellcheck="false">
+            <div class="typing-stats">
+                <div class="wpm">WPM: <span id="wpmCounter">0</span></div>
+                <div class="accuracy">Accuracy: <span id="accuracyCounter">100%</span></div>
+                <div class="hits">Hits: <span id="hitCounter">0</span></div>
+            </div>
+            <div class="damage-legend">
+                <small>
+                    <span style="color: #2ecc71;">●</span> 4 letters = 5 damage |
+                    <span style="color: #3498db;">●</span> 5 letters = 7 damage |
+                    <span style="color: #f39c12;">●</span> 6 letters = 9 damage |
+                    <span style="color: #e74c3c;">●</span> 7 letters = 15 damage |
+                    <span style="color: #8e44ad;">●</span> 8 letters = 20 damage
+                </small>
+            </div>
+        </div>
+
+        <!-- Battle Leaderboard -->
+        <div class="battle-leaderboard">
+            <h3>⚔️ Battle Stats</h3>
+            <div id="battleLeaderboardList" class="battle-stats-list"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+[interpreter]
+
+[nix]
+channel = "stable-21_11"
+
+[deployment]
+run = ["sh", "-c", "npm start"]
