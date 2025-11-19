@@ -214,8 +214,19 @@ class GameRoom {
         if (foundWord.targetPlayer && foundWord.targetPlayer !== playerId) {
             const targetPlayer = this.players.get(foundWord.targetPlayer);
             if (targetPlayer && targetPlayer.health > 0) {
+                const wasAlive = targetPlayer.health > 0;
                 targetPlayer.health = Math.max(0, targetPlayer.health - damage);
                 player.hits++;
+
+                // Check if player was just eliminated
+                if (wasAlive && targetPlayer.health <= 0) {
+                    // Emit elimination event to all players in the room
+                    this.emitToRoom('playerEliminated', {
+                        playerId: foundWord.targetPlayer,
+                        playerName: targetPlayer.name,
+                        eliminatedBy: player.name
+                    });
+                }
 
                 return {
                     type: 'attack',

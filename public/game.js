@@ -11,6 +11,7 @@ class KeyboardBreaker {
         this.sabotageLevel = 0;
         this.slowdownEffect = 0;
         this.selectedGameMode = 'race'; // Default game mode
+        this.isEliminated = false; // Track if player is eliminated in battle mode
 
         // Game screens
         this.heroScreen = document.getElementById('heroScreen');
@@ -292,6 +293,11 @@ class KeyboardBreaker {
 
         this.socket.on('battleAction', (actionData) => {
             this.handleBattleAction(actionData);
+        });
+
+        // Handle player elimination
+        this.socket.on('playerEliminated', (data) => {
+            this.handlePlayerElimination(data);
         });
 
         this.socket.on('battleEnded', (data) => {
@@ -680,6 +686,7 @@ class KeyboardBreaker {
     initBattleMode() {
         this.availableWords = new Map(); // Track all available words
         this.typingStartTime = Date.now();
+        this.isEliminated = false; // Reset elimination status for new battle
 
         // Clear any existing typing input event listeners to prevent duplicates
         const typingInput = document.getElementById('typingInput');
@@ -806,6 +813,9 @@ class KeyboardBreaker {
     }
 
     handleDirectTypingInput(inputValue) {
+        // Don't allow input if player is eliminated
+        if (this.isEliminated) return;
+
         const input = inputValue.toLowerCase().trim();
         const typingInput = document.getElementById('typingInput');
         if (!typingInput) return;
@@ -842,6 +852,9 @@ class KeyboardBreaker {
     }
 
     attemptDirectWordCompletion() {
+        // Don't allow word completion if player is eliminated
+        if (this.isEliminated) return;
+
         const typingInput = document.getElementById('typingInput');
         if (!typingInput) return;
 
@@ -940,6 +953,57 @@ class KeyboardBreaker {
 
             leaderboard.appendChild(statEl);
         });
+    }
+
+    handlePlayerElimination(data) {
+        // Show elimination alert that doesn't interfere with gameplay
+        const eliminationAlert = document.createElement('div');
+        eliminationAlert.className = 'elimination-alert';
+        eliminationAlert.innerHTML = `
+            <div class="elimination-content">
+                💀 ${data.playerName} has been eliminated!
+            </div>
+        `;
+        eliminationAlert.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+            animation: slideInRight 0.5s ease-out;
+            pointer-events: none;
+        `;
+
+        document.body.appendChild(eliminationAlert);
+
+        // Remove alert after 3 seconds
+        setTimeout(() => {
+            eliminationAlert.style.animation = 'slideOutRight 0.5s ease-in';
+            setTimeout(() => {
+                eliminationAlert.remove();
+            }, 500);
+        }, 3000);
+
+        // If this player is eliminated, disable their input
+        if (data.playerId === this.playerId) {
+            this.isEliminated = true;
+            const typingInput = document.getElementById('typingInput');
+            if (typingInput) {
+                typingInput.disabled = true;
+                typingInput.placeholder = 'You have been eliminated!';
+                typingInput.style.background = 'rgba(231, 76, 60, 0.2)';
+                typingInput.style.borderColor = '#e74c3c';
+            }
+
+            // Show elimination message to the eliminated player
+            document.getElementById('currentWordDisplay').textContent = '💀 You have been eliminated!';
+            document.getElementById('currentWordDisplay').style.color = '#e74c3c';
+        }
     }
 }
 

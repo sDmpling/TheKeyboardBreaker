@@ -7,7 +7,12 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(npm install -g @railway/cli)",
+      "Bash(npm install)"
     ],
     "deny": [],
     "ask": []
