@@ -51,6 +51,8 @@ class KeyboardBreaker {
             this.battleScreen.classList.remove('hidden');
         } else {
             this.gameScreen.classList.remove('hidden');
+            // Initialize race lanes when showing race game screen
+            this.createRaceLanes(this.currentRoom ? this.currentRoom.playerCount : 4);
         }
     }
 
@@ -477,6 +479,23 @@ class KeyboardBreaker {
         });
     }
 
+    createRaceLanes(playerCount) {
+        const raceLanes = document.getElementById('raceLanes');
+        if (!raceLanes) return;
+
+        raceLanes.innerHTML = '';
+
+        // Create enough lanes for all players, with a minimum of 4 and maximum of 15
+        const maxLanes = Math.min(15, Math.max(4, playerCount + 1));
+
+        for (let i = 0; i < maxLanes; i++) {
+            const lane = document.createElement('div');
+            lane.className = 'lane';
+            lane.innerHTML = `<span class="lane-number">${i + 1}</span>`;
+            raceLanes.appendChild(lane);
+        }
+    }
+
     updateGameState(gameState) {
         if (gameState.roomName) {
             document.getElementById('gameRoomName').textContent = `Room: ${gameState.roomName}`;
@@ -484,6 +503,11 @@ class KeyboardBreaker {
 
         document.getElementById('playerCount').textContent = gameState.playerCount;
         document.getElementById('maxPlayerCount').textContent = gameState.maxPlayers;
+
+        // Create race lanes based on player count for race mode
+        if (gameState.gameMode === 'race') {
+            this.createRaceLanes(gameState.playerCount);
+        }
 
         this.updatePlayerPositions(gameState.players);
         this.updateLeaderboard(gameState.leaderboard);
@@ -528,24 +552,36 @@ class KeyboardBreaker {
     }
 
     positionPlayerOnTrack(playerEl, position, playerId) {
-        const maxRadius = 280;
-        const minRadius = 40;
-        const currentRadius = maxRadius - (position / 100) * (maxRadius - minRadius);
+        // Drag race track dimensions
+        const trackWidth = 800;  // Total race track width
+        const laneHeight = 60;   // Height per lane
+        const startX = 50;       // Left margin (start line position)
+        const topMargin = 80;    // Top margin for first lane
 
-        const playerIndex = Array.from(document.getElementById('playersContainer').children).length;
-        const baseAngle = (playerIndex * 24) % 360;
-        const angle = baseAngle + (position * 2);
+        // Calculate horizontal position (0-100% = startX to startX + trackWidth)
+        const x = startX + (position / 100) * trackWidth;
 
-        const radian = (angle * Math.PI) / 180;
-        const x = 300 + currentRadius * Math.cos(radian);
-        const y = 300 + currentRadius * Math.sin(radian);
+        // Find lane assignment for this player
+        const playersContainer = document.getElementById('playersContainer');
+        const allPlayerElements = Array.from(playersContainer.children);
+        let laneIndex = allPlayerElements.indexOf(playerEl);
 
+        // If player element isn't found (new player), assign next available lane
+        if (laneIndex === -1) {
+            laneIndex = allPlayerElements.length;
+        }
+
+        // Calculate vertical position in lane
+        const y = topMargin + (laneIndex * laneHeight) + (laneHeight / 2) - 12; // Center in lane
+
+        // Position the player
         playerEl.style.left = `${x - 12}px`;
-        playerEl.style.top = `${y - 12}px`;
+        playerEl.style.top = `${y}px`;
 
-        const rotationAngle = angle + 90;
-        playerEl.style.transform = `rotate(${rotationAngle}deg)`;
+        // Remove rotation for horizontal racing
+        playerEl.style.transform = 'rotate(0deg)';
 
+        // Highlight current player
         if (playerId === this.playerId) {
             playerEl.style.filter = 'drop-shadow(0 0 10px #00FF7F)';
             playerEl.style.zIndex = '20';
