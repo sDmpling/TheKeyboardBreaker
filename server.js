@@ -780,6 +780,43 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Handle host restart game
+    socket.on('hostRestartGame', () => {
+        const playerRoom = findPlayerRoom(socket.id);
+        if (playerRoom && socket.id === playerRoom.ownerId) {
+            // Cancel any pending auto-restart
+            if (playerRoom.restartTimeout) {
+                clearTimeout(playerRoom.restartTimeout);
+                playerRoom.restartTimeout = null;
+            }
+
+            // Start new game immediately
+            if (playerRoom.gameMode === GAME_MODES.BATTLE) {
+                startBattleGame(playerRoom);
+            } else {
+                startRoomGame(playerRoom);
+            }
+
+            console.log(`Host ${socket.id} restarted game in room ${playerRoom.roomCode}`);
+        }
+    });
+
+    // Handle host end game
+    socket.on('hostEndGame', () => {
+        const playerRoom = findPlayerRoom(socket.id);
+        if (playerRoom && socket.id === playerRoom.ownerId) {
+            // Cancel any pending auto-restart
+            if (playerRoom.restartTimeout) {
+                clearTimeout(playerRoom.restartTimeout);
+                playerRoom.restartTimeout = null;
+            }
+
+            // Return all players to lobby
+            io.to(playerRoom.roomCode).emit('gameSessionEnded');
+            console.log(`Host ${socket.id} ended game session in room ${playerRoom.roomCode}`);
+        }
+    });
+
     // Handle player disconnect
     socket.on('disconnect', () => {
         console.log('Player disconnected:', socket.id);
@@ -894,22 +931,35 @@ function endRoomGame(room) {
     room.gameActive = false;
 
     if (room.winner) {
+        // Determine if host controls should be shown (rooms with 2+ players)
+        const hostControls = room.players.size >= 2;
+
         io.to(room.roomCode).emit('gameEnded', {
             winner: {
                 id: room.winner.id,
                 name: room.winner.name,
                 keyCount: room.winner.keyCount
-            }
+            },
+            hostControls: hostControls
         });
 
         console.log(`Game ended in room ${room.roomCode}. Winner: ${room.winner.name}`);
 
-        // Auto-restart after 5 seconds
-        setTimeout(() => {
-            if (room.players.size > 0 && rooms.has(room.roomCode)) {
-                startRoomGame(room);
-            }
-        }, 5000);
+        if (hostControls) {
+            // Store restart timeout ID for potential cancellation
+            room.restartTimeout = setTimeout(() => {
+                if (room.players.size > 0 && rooms.has(room.roomCode)) {
+                    startRoomGame(room);
+                }
+            }, 10000); // Extended to 10 seconds for host decision
+        } else {
+            // Auto-restart after 5 seconds for single player
+            setTimeout(() => {
+                if (room.players.size > 0 && rooms.has(room.roomCode)) {
+                    startRoomGame(room);
+                }
+            }, 5000);
+        }
     }
 }
 
@@ -1055,6 +1105,9 @@ function endBattleGame(room) {
     }
 
     if (room.winner) {
+        // Determine if host controls should be shown (rooms with 2+ players)
+        const hostControls = room.players.size >= 2;
+
         io.to(room.roomCode).emit('battleEnded', {
             winner: {
                 id: room.winner.id,
@@ -1063,17 +1116,27 @@ function endBattleGame(room) {
                 wordsTyped: room.winner.wordsTyped,
                 wpm: room.winner.wpm,
                 accuracy: room.winner.accuracy
-            }
+            },
+            hostControls: hostControls
         });
 
         console.log(`Battle ended in room ${room.roomCode}. Winner: ${room.winner.name}`);
 
-        // Auto-restart after 10 seconds
-        setTimeout(() => {
-            if (room.players.size > 0 && rooms.has(room.roomCode)) {
-                startBattleGame(room);
-            }
-        }, 10000);
+        if (hostControls) {
+            // Store restart timeout ID for potential cancellation
+            room.restartTimeout = setTimeout(() => {
+                if (room.players.size > 0 && rooms.has(room.roomCode)) {
+                    startBattleGame(room);
+                }
+            }, 10000); // Extended to 10 seconds for host decision
+        } else {
+            // Auto-restart after 10 seconds for single player
+            setTimeout(() => {
+                if (room.players.size > 0 && rooms.has(room.roomCode)) {
+                    startBattleGame(room);
+                }
+            }, 10000);
+        }
     }
 }
 

@@ -226,10 +226,7 @@ class KeyboardBreaker {
             this.gameActive = false;
             this.updateGameStatus(`🏆 ${data.winner.name} wins!`, '#FFD700');
             this.celebrateWinner(data.winner.id);
-
-            setTimeout(() => {
-                this.updateGameStatus('New race starting...', 'white');
-            }, 3000);
+            this.showWinnerModal(data.winner, data.hostControls);
         });
 
         this.socket.on('speedUpdate', (data) => {
@@ -306,10 +303,14 @@ class KeyboardBreaker {
             this.gameActive = false;
             this.updateBattleStatus(`🏆 ${data.winner.name} wins the battle!`, '#FFD700');
             this.celebrateWinner(data.winner.id);
+            this.showWinnerModal(data.winner, data.hostControls);
+        });
 
-            setTimeout(() => {
-                this.updateBattleStatus('New battle starting...', 'white');
-            }, 3000);
+        this.socket.on('gameSessionEnded', () => {
+            this.gameActive = false;
+            this.hideWinnerModal();
+            this.showLobbyScreen();
+            this.updateGameStatus('Host ended the game session', '#FFD700');
         });
     }
 
@@ -686,6 +687,91 @@ class KeyboardBreaker {
         }).onfinish = () => {
             particle.remove();
         };
+    }
+
+    showWinnerModal(winner, hostControls = false) {
+        const modal = document.getElementById('winnerModal');
+        const winnerIcon = document.getElementById('winnerIcon');
+        const winnerName = document.getElementById('winnerName');
+        const winnerKeyCount = document.getElementById('winnerKeyCount');
+        const hostControlsDiv = document.getElementById('hostControls');
+        const waitingDiv = document.getElementById('waitingForHost');
+        const autoRestartDiv = document.getElementById('autoRestartCountdown');
+
+        // Set winner information
+        // Find the winner's icon from the players container
+        const winnerElement = document.getElementById(`player-${winner.id}`);
+        const winnerPlayerIcon = winnerElement ? winnerElement.textContent : '🚂';
+
+        winnerIcon.textContent = winnerPlayerIcon;
+        winnerName.textContent = winner.name;
+        winnerKeyCount.textContent = winner.keyCount;
+
+        // Show appropriate controls based on whether user is host
+        if (hostControls && this.isRoomOwner) {
+            hostControlsDiv.classList.remove('hidden');
+            waitingDiv.classList.add('hidden');
+            autoRestartDiv.classList.add('hidden');
+            this.setupHostControlListeners();
+        } else if (hostControls) {
+            // Non-host player - show waiting message
+            hostControlsDiv.classList.add('hidden');
+            waitingDiv.classList.remove('hidden');
+            autoRestartDiv.classList.add('hidden');
+        } else {
+            // Auto-restart mode - show countdown
+            hostControlsDiv.classList.add('hidden');
+            waitingDiv.classList.add('hidden');
+            autoRestartDiv.classList.remove('hidden');
+            this.startAutoRestartCountdown();
+        }
+
+        // Show the modal
+        modal.classList.remove('hidden');
+    }
+
+    setupHostControlListeners() {
+        const restartBtn = document.getElementById('restartGameBtn');
+        const endBtn = document.getElementById('endGameBtn');
+
+        // Remove any existing listeners
+        restartBtn.replaceWith(restartBtn.cloneNode(true));
+        endBtn.replaceWith(endBtn.cloneNode(true));
+
+        // Get fresh references after cloning
+        const newRestartBtn = document.getElementById('restartGameBtn');
+        const newEndBtn = document.getElementById('endGameBtn');
+
+        newRestartBtn.addEventListener('click', () => {
+            this.socket.emit('hostRestartGame');
+            this.hideWinnerModal();
+        });
+
+        newEndBtn.addEventListener('click', () => {
+            this.socket.emit('hostEndGame');
+            this.hideWinnerModal();
+            this.showHeroScreen();
+        });
+    }
+
+    startAutoRestartCountdown() {
+        const countdownTimer = document.getElementById('countdownTimer');
+        let timeLeft = 5;
+
+        const countdown = setInterval(() => {
+            timeLeft--;
+            countdownTimer.textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                this.hideWinnerModal();
+            }
+        }, 1000);
+    }
+
+    hideWinnerModal() {
+        const modal = document.getElementById('winnerModal');
+        modal.classList.add('hidden');
     }
 
     sendChatMessage() {

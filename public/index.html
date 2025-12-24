@@ -301,6 +301,46 @@
         </div>
     </div>
 
+    <!-- Winner Alert Modal -->
+    <div id="winnerModal" class="modal hidden">
+        <div class="modal-content winner-modal-content">
+            <div class="winner-announcement">
+                <div class="winner-trophy">🏆</div>
+                <h2 id="winnerTitle">🎉 Winner! 🎉</h2>
+                <div class="winner-details">
+                    <div class="winner-icon" id="winnerIcon">🚂</div>
+                    <div class="winner-name" id="winnerName">Player Name</div>
+                </div>
+                <div class="winner-stats" id="winnerStats">
+                    Keys pressed: <span id="winnerKeyCount">0</span>
+                </div>
+            </div>
+
+            <!-- Host Controls (only shown to room owner) -->
+            <div id="hostControls" class="host-controls hidden">
+                <h3>🎮 Host Options</h3>
+                <div class="host-buttons">
+                    <button id="restartGameBtn" class="btn btn-primary">
+                        🔄 Start New Game
+                    </button>
+                    <button id="endGameBtn" class="btn btn-secondary">
+                        🏁 End Session
+                    </button>
+                </div>
+            </div>
+
+            <!-- Non-host message -->
+            <div id="waitingForHost" class="waiting-message hidden">
+                <p>⏳ Waiting for host to decide...</p>
+            </div>
+
+            <!-- Auto-restart countdown -->
+            <div id="autoRestartCountdown" class="auto-restart-countdown hidden">
+                <p>🔄 Starting new game in <span id="countdownTimer">5</span> seconds...</p>
+            </div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="game.js"></script>
 </body>

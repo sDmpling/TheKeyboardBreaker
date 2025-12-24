@@ -1094,6 +1094,156 @@ h1 {
     100% { transform: scale(1.1) rotate(2deg); }
 }
 
+/* Winner Modal Styles */
+.winner-modal-content {
+    max-width: 500px;
+    text-align: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 3px solid #FFD700;
+    animation: modalPopIn 0.5s ease-out;
+}
+
+@keyframes modalPopIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.7) translateY(-50px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.winner-announcement {
+    margin-bottom: 30px;
+}
+
+.winner-trophy {
+    font-size: 4rem;
+    margin-bottom: 10px;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+#winnerTitle {
+    color: #FFD700;
+    font-size: 2.5rem;
+    margin: 15px 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    0% {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(255,215,0,0.5);
+    }
+    100% {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(255,215,0,0.8);
+    }
+}
+
+.winner-details {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.winner-icon {
+    font-size: 3rem;
+    animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.winner-name {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #FFFFFF;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+.winner-stats {
+    font-size: 1.3rem;
+    color: #E0E0E0;
+    margin: 15px 0;
+}
+
+.host-controls {
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.host-controls h3 {
+    color: #FFD700;
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
+.host-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.host-buttons .btn {
+    font-size: 1.1rem;
+    padding: 12px 25px;
+    min-width: 150px;
+    transition: all 0.3s ease;
+}
+
+.host-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.waiting-message {
+    background: rgba(255,215,0,0.2);
+    border: 2px solid #FFD700;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 20px 0;
+    color: #FFD700;
+    font-size: 1.2rem;
+    animation: pulse 2s infinite;
+}
+
+.auto-restart-countdown {
+    background: rgba(0,255,127,0.2);
+    border: 2px solid #00FF7F;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 20px 0;
+    color: #00FF7F;
+    font-size: 1.2rem;
+}
+
+#countdownTimer {
+    font-weight: bold;
+    font-size: 1.4rem;
+    color: #FFFFFF;
+    text-shadow: 0 0 10px rgba(0,255,127,0.8);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .race-track {
@@ -1137,6 +1287,33 @@ h1 {
     .game-info {
         flex-direction: column;
         gap: 10px;
+    }
+
+    /* Winner Modal Mobile */
+    .winner-modal-content {
+        max-width: 90%;
+        margin: 10px;
+    }
+
+    #winnerTitle {
+        font-size: 2rem;
+    }
+
+    .winner-icon {
+        font-size: 2.5rem;
+    }
+
+    .winner-name {
+        font-size: 1.5rem;
+    }
+
+    .host-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .host-buttons .btn {
+        min-width: 200px;
     }
 }
 
