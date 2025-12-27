@@ -54,6 +54,7 @@ class GameRoom {
             this.wordId = 0; // For unique word IDs
             this.battleStartTime = null;
             this.timerInterval = null;
+            this.lastElimination = null; // Track elimination events
 
             // Circular targeting system
             this.playerTargets = new Map(); // Maps attacker ID to target ID
@@ -349,12 +350,12 @@ class GameRoom {
                     // Handle target reassignment after elimination
                     this.reassignTargetsAfterElimination(foundWord.targetPlayer);
 
-                    // Emit elimination event to all players in the room
-                    this.emitToRoom('playerEliminated', {
+                    // Mark that elimination happened (will be handled by calling code)
+                    this.lastElimination = {
                         playerId: foundWord.targetPlayer,
                         playerName: targetPlayer.name,
                         eliminatedBy: player.name
-                    });
+                    };
                 }
 
                 return {
@@ -920,6 +921,12 @@ io.on('connection', (socket) => {
                     // Update player stats
                     player.completeWord(attackResult.word, timeTaken);
 
+                    // Check if elimination happened and emit event
+                    if (room.lastElimination) {
+                        io.to(room.roomCode).emit('playerEliminated', room.lastElimination);
+                        room.lastElimination = null; // Clear the elimination marker
+                    }
+
                     // Broadcast attack to all players in room
                     io.to(room.roomCode).emit('battleAction', attackResult);
 
@@ -1272,6 +1279,13 @@ function battleGameLoop(room) {
                 const attackResult = room.processWordCompletion(player.id, completedWord.text);
                 if (attackResult) {
                     player.completeWord(attackResult.word, 500); // Assume 500ms typing time for AI
+
+                    // Check if elimination happened and emit event
+                    if (room.lastElimination) {
+                        io.to(room.roomCode).emit('playerEliminated', room.lastElimination);
+                        room.lastElimination = null; // Clear the elimination marker
+                    }
+
                     io.to(room.roomCode).emit('battleAction', attackResult);
 
                     if (room.checkBattleEnd()) {
@@ -1378,7 +1392,7 @@ function broadcastBattleState(room) {
 }
 
 // Start server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚂 Keyboard Breaker server running on port ${PORT}`);
     console.log(`🌐 Open http://localhost:${PORT} to play!`);
