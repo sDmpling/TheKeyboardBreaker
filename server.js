@@ -344,9 +344,12 @@ class GameRoom {
                 const wasAlive = targetPlayer.health > 0;
                 targetPlayer.health = Math.max(0, targetPlayer.health - damage);
                 player.hits++;
+                player.damageDealt += damage; // Track total damage dealt
 
                 // Check if player was just eliminated
                 if (wasAlive && targetPlayer.health <= 0) {
+                    player.eliminations++; // Track eliminations
+
                     // Handle target reassignment after elimination
                     this.reassignTargetsAfterElimination(foundWord.targetPlayer);
 
@@ -437,6 +440,8 @@ class Player {
         this.totalCharacters = 0;
         this.correctCharacters = 0;
         this.startTime = Date.now();
+        this.damageDealt = 0;
+        this.eliminations = 0;
 
         // AI-specific properties
         if (isAI) {
@@ -626,6 +631,8 @@ class Player {
         this.totalCharacters = 0;
         this.correctCharacters = 0;
         this.startTime = Date.now();
+        this.damageDealt = 0;
+        this.eliminations = 0;
         this.isWinner = false;
 
         if (this.isAI) {
@@ -1331,10 +1338,13 @@ function endBattleGame(room) {
             winner: {
                 id: room.winner.id,
                 name: room.winner.name,
+                icon: room.winner.icon,
                 hits: room.winner.hits,
                 wordsTyped: room.winner.wordsTyped,
                 wpm: room.winner.wpm,
-                accuracy: room.winner.accuracy
+                accuracy: room.winner.accuracy,
+                damageDealt: room.winner.damageDealt,
+                eliminations: room.winner.eliminations
             },
             hostControls: hostControls
         });

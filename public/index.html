@@ -320,7 +320,26 @@
                     <div class="winner-name" id="winnerName">Player Name</div>
                 </div>
                 <div class="winner-stats" id="winnerStats">
-                    Keys pressed: <span id="winnerKeyCount">0</span>
+                    <div class="stat-item">
+                        <span class="stat-label">⚡ Keys Pressed:</span>
+                        <span id="winnerKeyCount">0</span>
+                    </div>
+                    <div class="stat-item battle-stat">
+                        <span class="stat-label">💀 Eliminations:</span>
+                        <span id="winnerEliminations">0</span>
+                    </div>
+                    <div class="stat-item battle-stat">
+                        <span class="stat-label">⚔️ Damage Dealt:</span>
+                        <span id="winnerDamage">0</span>
+                    </div>
+                    <div class="stat-item battle-stat">
+                        <span class="stat-label">⌨️ Words Per Minute:</span>
+                        <span id="winnerWPM">0</span>
+                    </div>
+                    <div class="stat-item battle-stat">
+                        <span class="stat-label">🎯 Accuracy:</span>
+                        <span id="winnerAccuracy">100</span>%
+                    </div>
                 </div>
             </div>
 
@@ -328,11 +347,14 @@
             <div id="hostControls" class="host-controls hidden">
                 <h3>🎮 Host Options</h3>
                 <div class="host-buttons">
-                    <button id="restartGameBtn" class="btn btn-primary">
+                    <button id="restartGameBtn" class="btn primary">
                         🔄 Start New Game
                     </button>
-                    <button id="endGameBtn" class="btn btn-secondary">
+                    <button id="endGameBtn" class="btn secondary">
                         🏁 End Session
+                    </button>
+                    <button id="returnMainMenuBtn" class="btn tertiary">
+                        🏠 Return to Main Menu
                     </button>
                 </div>
             </div>
@@ -340,11 +362,21 @@
             <!-- Non-host message -->
             <div id="waitingForHost" class="waiting-message hidden">
                 <p>⏳ Waiting for host to decide...</p>
+                <div class="non-host-buttons">
+                    <button id="nonHostMainMenuBtn" class="btn tertiary">
+                        🏠 Return to Main Menu
+                    </button>
+                </div>
             </div>
 
             <!-- Auto-restart countdown -->
             <div id="autoRestartCountdown" class="auto-restart-countdown hidden">
                 <p>🔄 Starting new game in <span id="countdownTimer">5</span> seconds...</p>
+                <div class="auto-restart-buttons">
+                    <button id="autoRestartMainMenuBtn" class="btn tertiary">
+                        🏠 Return to Main Menu
+                    </button>
+                </div>
             </div>
         </div>
     </div>

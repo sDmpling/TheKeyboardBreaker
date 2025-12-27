@@ -756,13 +756,25 @@ class KeyboardBreaker {
         const autoRestartDiv = document.getElementById('autoRestartCountdown');
 
         // Set winner information
-        // Find the winner's icon from the players container
-        const winnerElement = document.getElementById(`player-${winner.id}`);
-        const winnerPlayerIcon = winnerElement ? winnerElement.textContent : '🚂';
+        const winnerPlayerIcon = winner.icon || '🚂';
 
         winnerIcon.textContent = winnerPlayerIcon;
         winnerName.textContent = winner.name;
-        winnerKeyCount.textContent = winner.keyCount;
+
+        // Set statistics based on game mode
+        if (this.currentRoom && this.currentRoom.gameMode === 'battle') {
+            // Battle mode statistics
+            modal.classList.add('battle-mode');
+            winnerKeyCount.textContent = winner.hits || 0;
+            document.getElementById('winnerEliminations').textContent = winner.eliminations || 0;
+            document.getElementById('winnerDamage').textContent = winner.damageDealt || 0;
+            document.getElementById('winnerWPM').textContent = winner.wpm || 0;
+            document.getElementById('winnerAccuracy').textContent = winner.accuracy || 100;
+        } else {
+            // Race mode statistics
+            modal.classList.remove('battle-mode');
+            winnerKeyCount.textContent = winner.keyCount || 0;
+        }
 
         // Show appropriate controls based on whether user is host
         if (hostControls && this.isRoomOwner) {
@@ -775,11 +787,13 @@ class KeyboardBreaker {
             hostControlsDiv.classList.add('hidden');
             waitingDiv.classList.remove('hidden');
             autoRestartDiv.classList.add('hidden');
+            this.setupNonHostControlListeners();
         } else {
             // Auto-restart mode - show countdown
             hostControlsDiv.classList.add('hidden');
             waitingDiv.classList.add('hidden');
             autoRestartDiv.classList.remove('hidden');
+            this.setupAutoRestartControlListeners();
             this.startAutoRestartCountdown();
         }
 
@@ -790,14 +804,17 @@ class KeyboardBreaker {
     setupHostControlListeners() {
         const restartBtn = document.getElementById('restartGameBtn');
         const endBtn = document.getElementById('endGameBtn');
+        const mainMenuBtn = document.getElementById('returnMainMenuBtn');
 
         // Remove any existing listeners
         restartBtn.replaceWith(restartBtn.cloneNode(true));
         endBtn.replaceWith(endBtn.cloneNode(true));
+        mainMenuBtn.replaceWith(mainMenuBtn.cloneNode(true));
 
         // Get fresh references after cloning
         const newRestartBtn = document.getElementById('restartGameBtn');
         const newEndBtn = document.getElementById('endGameBtn');
+        const newMainMenuBtn = document.getElementById('returnMainMenuBtn');
 
         newRestartBtn.addEventListener('click', () => {
             this.socket.emit('hostRestartGame');
@@ -809,6 +826,48 @@ class KeyboardBreaker {
             this.hideWinnerModal();
             this.showHeroScreen();
         });
+
+        newMainMenuBtn.addEventListener('click', () => {
+            this.returnToMainMenu();
+        });
+    }
+
+    setupNonHostControlListeners() {
+        const nonHostMainMenuBtn = document.getElementById('nonHostMainMenuBtn');
+
+        // Remove any existing listeners
+        nonHostMainMenuBtn.replaceWith(nonHostMainMenuBtn.cloneNode(true));
+
+        // Get fresh reference after cloning
+        const newNonHostMainMenuBtn = document.getElementById('nonHostMainMenuBtn');
+
+        newNonHostMainMenuBtn.addEventListener('click', () => {
+            this.returnToMainMenu();
+        });
+    }
+
+    setupAutoRestartControlListeners() {
+        const autoRestartMainMenuBtn = document.getElementById('autoRestartMainMenuBtn');
+
+        // Remove any existing listeners
+        autoRestartMainMenuBtn.replaceWith(autoRestartMainMenuBtn.cloneNode(true));
+
+        // Get fresh reference after cloning
+        const newAutoRestartMainMenuBtn = document.getElementById('autoRestartMainMenuBtn');
+
+        newAutoRestartMainMenuBtn.addEventListener('click', () => {
+            this.returnToMainMenu();
+        });
+    }
+
+    returnToMainMenu() {
+        // Leave the current room and return to hero screen
+        this.socket.emit('leaveRoom');
+        this.hideWinnerModal();
+        this.showHeroScreen();
+        this.currentRoom = null;
+        this.isOwner = false;
+        this.gameActive = false;
     }
 
     startAutoRestartCountdown() {
