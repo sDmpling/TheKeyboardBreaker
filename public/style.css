@@ -562,6 +562,45 @@ body {
     font-weight: bold;
 }
 
+/* Target Display */
+.target-display {
+    text-align: center;
+    margin: 20px auto;
+    padding: 15px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 2px solid #FFD700;
+    border-radius: 10px;
+    max-width: 400px;
+    backdrop-filter: blur(10px);
+}
+
+.target-info {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.target-label {
+    color: #FFFFFF;
+    margin-right: 10px;
+}
+
+.target-player {
+    color: #00FF7F;
+    text-shadow: 0 0 10px rgba(0, 255, 127, 0.5);
+    animation: targetGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes targetGlow {
+    0% {
+        text-shadow: 0 0 10px rgba(0, 255, 127, 0.5);
+    }
+    100% {
+        text-shadow: 0 0 20px rgba(0, 255, 127, 0.8), 0 0 30px rgba(0, 255, 127, 0.3);
+    }
+}
+
 /* Battle Arena */
 .battle-arena {
     background: linear-gradient(45deg, #2C3E50 0%, #34495E 100%);

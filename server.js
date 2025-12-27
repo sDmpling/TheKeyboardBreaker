@@ -54,6 +54,10 @@ class GameRoom {
             this.wordId = 0; // For unique word IDs
             this.battleStartTime = null;
             this.timerInterval = null;
+
+            // Circular targeting system
+            this.playerTargets = new Map(); // Maps attacker ID to target ID
+            this.targetingOrder = []; // Array of player IDs in circular order
         }
     }
 
@@ -139,12 +143,25 @@ class GameRoom {
         const wordList = battleWords[`length${wordLength}`];
         const word = wordList[Math.floor(Math.random() * wordList.length)];
 
+        // For circular targeting, we need to assign this word to a specific attacker-target pair
+        // Get a random alive player who will be the "owner" of this word
+        const alivePlayerIds = Array.from(this.players.keys())
+            .filter(id => this.players.get(id).health > 0);
+
+        if (alivePlayerIds.length < 2) return null;
+
+        const wordOwnerId = alivePlayerIds[Math.floor(Math.random() * alivePlayerIds.length)];
+        const targetPlayerId = this.getPlayerTarget(wordOwnerId);
+
+        if (!targetPlayerId) return null;
+
         const wordData = {
             id: ++this.wordId,
             text: word,
             length: wordLength,
             damage: this.calculateWordDamage(wordLength),
-            targetPlayer: this.getRandomPlayer(),
+            ownerId: wordOwnerId,  // Who can type this word to attack
+            targetPlayer: targetPlayerId,  // Who gets damaged when word is completed
             createdAt: Date.now(),
             position: {
                 x: Math.random() * 80 + 10, // 10-90% of container width
@@ -183,7 +200,76 @@ class GameRoom {
         return damageMap[wordLength] || 5; // Default to 5 if something goes wrong
     }
 
+    // Circular targeting system methods
+    initializeCircularTargets() {
+        if (this.gameMode !== GAME_MODES.BATTLE) return;
+
+        // Get all alive players
+        const alivePlayerIds = Array.from(this.players.keys())
+            .filter(id => this.players.get(id).health > 0);
+
+        if (alivePlayerIds.length < 2) return;
+
+        // Create circular targeting order
+        this.targetingOrder = [...alivePlayerIds];
+        this.playerTargets.clear();
+
+        // Set up circular targeting: each player targets the next one
+        for (let i = 0; i < alivePlayerIds.length; i++) {
+            const attackerId = alivePlayerIds[i];
+            const targetId = alivePlayerIds[(i + 1) % alivePlayerIds.length]; // Circular
+            this.playerTargets.set(attackerId, targetId);
+        }
+
+        console.log('Initialized circular targets:', Array.from(this.playerTargets.entries()));
+    }
+
+    getPlayerTarget(attackerId) {
+        if (this.gameMode !== GAME_MODES.BATTLE) return null;
+
+        // First check if we have initialized targets
+        if (this.playerTargets.size === 0) {
+            this.initializeCircularTargets();
+        }
+
+        return this.playerTargets.get(attackerId) || null;
+    }
+
+    reassignTargetsAfterElimination(eliminatedPlayerId) {
+        if (this.gameMode !== GAME_MODES.BATTLE) return;
+
+        // Find who was targeting the eliminated player
+        let attackerOfEliminated = null;
+        for (const [attackerId, targetId] of this.playerTargets.entries()) {
+            if (targetId === eliminatedPlayerId) {
+                attackerOfEliminated = attackerId;
+                break;
+            }
+        }
+
+        if (attackerOfEliminated) {
+            // Find who the eliminated player was targeting
+            const targetOfEliminated = this.playerTargets.get(eliminatedPlayerId);
+
+            if (targetOfEliminated) {
+                // Redirect the attacker to target the eliminated player's target
+                this.playerTargets.set(attackerOfEliminated, targetOfEliminated);
+            }
+        }
+
+        // Remove the eliminated player from targeting
+        this.playerTargets.delete(eliminatedPlayerId);
+
+        // Remove from targeting order
+        this.targetingOrder = this.targetingOrder.filter(id => id !== eliminatedPlayerId);
+
+        console.log('Reassigned targets after elimination:', Array.from(this.playerTargets.entries()));
+    }
+
+    // Legacy method for compatibility - now uses targeted system
     getRandomPlayer() {
+        // This method is kept for backward compatibility but shouldn't be used
+        // Use getPlayerTarget() instead for battle mode
         const playerIds = Array.from(this.players.keys()).filter(id => this.players.get(id).health > 0);
         if (playerIds.length === 0) return null;
         return playerIds[Math.floor(Math.random() * playerIds.length)];
@@ -204,6 +290,13 @@ class GameRoom {
         const player = this.players.get(playerId);
         if (!player) return null;
 
+        // Check if this word belongs to the player (circular targeting)
+        // Only the word owner can type this word for damage
+        if (foundWord.ownerId && foundWord.ownerId !== playerId) {
+            // This word doesn't belong to this player - ignore the completion
+            return null;
+        }
+
         // Remove the completed word
         this.currentWords.delete(foundWord.id);
 
@@ -220,6 +313,9 @@ class GameRoom {
 
                 // Check if player was just eliminated
                 if (wasAlive && targetPlayer.health <= 0) {
+                    // Handle target reassignment after elimination
+                    this.reassignTargetsAfterElimination(foundWord.targetPlayer);
+
                     // Emit elimination event to all players in the room
                     this.emitToRoom('playerEliminated', {
                         playerId: foundWord.targetPlayer,
@@ -291,6 +387,11 @@ class Player {
         this.sabotageLevel = 0; // How much this player is slowing others
         this.keyBuffer = []; // Buffer to track recent key presses for rate limiting
         this.slowdownEffect = 0; // How much this player is being slowed by others
+
+        // Key hold prevention tracking
+        this.recentKeyPresses = new Map(); // Track recent key codes and their timestamps
+        this.lastKeyCode = null; // Track the last key pressed
+        this.consecutiveKeyCount = 0; // Track consecutive presses of the same key
 
         // Battle mode properties
         this.health = 100;
@@ -373,8 +474,13 @@ class Player {
         return false;
     }
 
-    pressKey() {
+    pressKey(keyCode = 'UNKNOWN', clientTimestamp = null) {
         const currentTime = Date.now();
+
+        // Anti-key-hold validation
+        if (!this.isValidKeyPress(keyCode, currentTime, clientTimestamp)) {
+            return false; // Key press rejected due to hold detection
+        }
 
         // Rate limiting: only allow 4 keys per 250ms window
         this.keyBuffer = this.keyBuffer.filter(keyTime => currentTime - keyTime < 250);
@@ -388,6 +494,9 @@ class Player {
 
         this.keyCount++;
         this.lastKeyTime = currentTime;
+
+        // Update key tracking for hold prevention
+        this.updateKeyTracking(keyCode, currentTime);
 
         // Calculate sabotage level based on key spam rate (0-15%)
         const keyRate = this.keyBuffer.length; // Keys in last 250ms
@@ -404,6 +513,55 @@ class Player {
         }
 
         return true; // Key press accepted
+    }
+
+    isValidKeyPress(keyCode, currentTime, clientTimestamp) {
+        // Allow certain key codes that are always valid (mouse/touch)
+        if (keyCode === 'CLICK' || keyCode === 'TOUCH' || keyCode === 'LEGACY') {
+            return true;
+        }
+
+        // Check for excessive same-key repetition (potential key hold)
+        if (keyCode === this.lastKeyCode) {
+            this.consecutiveKeyCount++;
+
+            // If same key pressed more than 3 times in a row very quickly, likely held down
+            if (this.consecutiveKeyCount > 3) {
+                const recentPresses = Array.from(this.recentKeyPresses.values())
+                    .filter(time => currentTime - time < 200); // Last 200ms
+
+                // If more than 3 presses of same key in 200ms, reject as key hold
+                if (recentPresses.length >= 3) {
+                    return false;
+                }
+            }
+        } else {
+            // Different key pressed, reset consecutive count
+            this.consecutiveKeyCount = 1;
+            this.lastKeyCode = keyCode;
+        }
+
+        // Check for unrealistic typing speed (more than 20 keys per second)
+        const recentKeys = Array.from(this.recentKeyPresses.values())
+            .filter(time => currentTime - time < 1000); // Last 1 second
+
+        if (recentKeys.length > 20) {
+            return false; // Too fast to be human
+        }
+
+        return true;
+    }
+
+    updateKeyTracking(keyCode, currentTime) {
+        // Track this key press
+        this.recentKeyPresses.set(`${keyCode}_${currentTime}`, currentTime);
+
+        // Clean up old entries (older than 2 seconds)
+        for (const [key, timestamp] of this.recentKeyPresses.entries()) {
+            if (currentTime - timestamp > 2000) {
+                this.recentKeyPresses.delete(key);
+            }
+        }
     }
 
     // Battle mode methods
@@ -684,12 +842,18 @@ io.on('connection', (socket) => {
     });
 
     // Handle key press (for race mode)
-    socket.on('keyPress', () => {
+    socket.on('keyPress', (data) => {
         const room = findPlayerRoom(socket.id);
         if (room && room.gameMode === GAME_MODES.RACE) {
             const player = room.players.get(socket.id);
             if (player && room.gameActive && !room.winner) {
-                const keyAccepted = player.pressKey();
+                // Handle both old format (no data) and new format (with keyCode/timestamp)
+                const keyData = data || {};
+                const keyCode = keyData.keyCode || 'UNKNOWN';
+                const clientTimestamp = keyData.timestamp || Date.now();
+
+                // Server-side validation for key press authenticity
+                const keyAccepted = player.pressKey(keyCode, clientTimestamp);
 
                 // Emit immediate feedback to the player
                 socket.emit('speedUpdate', {
@@ -699,6 +863,11 @@ io.on('connection', (socket) => {
                     slowdownEffect: player.slowdownEffect,
                     keyAccepted: keyAccepted
                 });
+
+                if (!keyAccepted) {
+                    // Optional: emit rate limit feedback
+                    // socket.emit('rateLimited');
+                }
             }
         }
     });
@@ -1027,6 +1196,9 @@ function startBattleGame(room) {
         player.resetForBattle();
     });
 
+    // Initialize circular targeting system
+    room.initializeCircularTargets();
+
     io.to(room.roomCode).emit('battleStarted');
     console.log(`Battle started in room ${room.roomCode} with ${room.players.size} players`);
 
@@ -1164,6 +1336,7 @@ function broadcastBattleState(room) {
         gameActive: room.gameActive,
         roomName: room.roomName,
         battleTimer: room.battleTimer,
+        playerTargets: Object.fromEntries(room.playerTargets), // Convert Map to object for client
         winner: room.winner ? {
             id: room.winner.id,
             name: room.winner.name

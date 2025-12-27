@@ -13,6 +13,10 @@ class KeyboardBreaker {
         this.selectedGameMode = 'race'; // Default game mode
         this.isEliminated = false; // Track if player is eliminated in battle mode
 
+        // Key hold prevention tracking
+        this.pressedKeys = new Set(); // Track which keys are currently pressed
+        this.lastValidKeyTime = 0; // Track timing for additional rate limiting
+
         // Game screens
         this.heroScreen = document.getElementById('heroScreen');
         this.lobbyScreen = document.getElementById('lobbyScreen');
@@ -214,6 +218,7 @@ class KeyboardBreaker {
 
         this.socket.on('gameStarted', () => {
             this.gameActive = true;
+            this.resetKeyTracking(); // Clear any stuck keys from previous game
             this.showGameScreen();
             this.updateGameStatus('Race in progress! SPAM KEYS!', '#00FF7F');
         });
@@ -224,6 +229,7 @@ class KeyboardBreaker {
 
         this.socket.on('gameEnded', (data) => {
             this.gameActive = false;
+            this.resetKeyTracking(); // Clear key tracking when game ends
             this.updateGameStatus(`🏆 ${data.winner.name} wins!`, '#FFD700');
             this.celebrateWinner(data.winner.id);
             this.showWinnerModal(data.winner, data.hostControls);
@@ -269,9 +275,16 @@ class KeyboardBreaker {
         // Battle mode socket listeners
         this.socket.on('battleStarted', () => {
             this.gameActive = true;
+            this.resetKeyTracking(); // Clear any stuck keys from previous game
             this.showGameScreen(); // This will now show battle screen for battle mode
             this.updateBattleStatus('Battle in progress! Type words to attack!', '#00FF7F');
             this.initBattleMode();
+
+            // Show target display for battle mode
+            const targetDisplay = document.getElementById('targetDisplay');
+            if (targetDisplay) {
+                targetDisplay.style.display = 'block';
+            }
         });
 
         this.socket.on('battleStateUpdate', (battleState) => {
@@ -301,6 +314,7 @@ class KeyboardBreaker {
 
         this.socket.on('battleEnded', (data) => {
             this.gameActive = false;
+            this.resetKeyTracking(); // Clear key tracking when battle ends
             this.updateBattleStatus(`🏆 ${data.winner.name} wins the battle!`, '#FFD700');
             this.celebrateWinner(data.winner.id);
             this.showWinnerModal(data.winner, data.hostControls);
@@ -315,34 +329,77 @@ class KeyboardBreaker {
     }
 
     setupKeyboardListeners() {
+        // Handle keydown events - only count if key wasn't already pressed
         document.addEventListener('keydown', (event) => {
             if (this.gameActive && this.currentRoom && this.currentRoom.gameMode === 'race') {
-                // Only capture keys for race mode
+                // Prevent default to avoid page interactions
                 event.preventDefault();
-                this.handleKeyPress();
+
+                // Only count this key press if the key wasn't already being held down
+                if (!this.pressedKeys.has(event.code) && !event.repeat) {
+                    this.pressedKeys.add(event.code);
+                    this.handleValidKeyPress(event.code);
+                }
             }
         });
 
+        // Handle keyup events - remove key from pressed set
+        document.addEventListener('keyup', (event) => {
+            if (this.gameActive && this.currentRoom && this.currentRoom.gameMode === 'race') {
+                this.pressedKeys.delete(event.code);
+            }
+        });
+
+        // Handle click events (mouse clicks still count as valid input)
         document.addEventListener('click', () => {
             if (this.gameActive && this.currentRoom && this.currentRoom.gameMode === 'race') {
-                // Only handle clicks for race mode
-                this.handleKeyPress();
+                this.handleValidKeyPress('CLICK');
             }
         });
 
+        // Handle touch events (mobile support)
         document.addEventListener('touchstart', (event) => {
             if (this.gameActive && this.currentRoom && this.currentRoom.gameMode === 'race') {
-                // Only handle touches for race mode
                 event.preventDefault();
-                this.handleKeyPress();
+                this.handleValidKeyPress('TOUCH');
             }
+        });
+
+        // Clear pressed keys when window loses focus (prevents stuck keys)
+        window.addEventListener('blur', () => {
+            this.pressedKeys.clear();
         });
     }
 
-    handleKeyPress() {
-        if (this.gameActive && this.playerId) {
-            this.socket.emit('keyPress');
+    handleValidKeyPress(keyCode) {
+        if (!this.gameActive || !this.playerId) return;
+
+        const currentTime = Date.now();
+
+        // Additional client-side rate limiting: minimum 25ms between valid key presses
+        // This prevents rapid-fire key spamming while still allowing fast legitimate play
+        if (currentTime - this.lastValidKeyTime < 25) {
+            return; // Too fast, ignore this key press
         }
+
+        this.lastValidKeyTime = currentTime;
+
+        // Send the key press to server with timing info
+        this.socket.emit('keyPress', {
+            keyCode: keyCode,
+            timestamp: currentTime
+        });
+    }
+
+    // Legacy method for compatibility (if needed elsewhere)
+    handleKeyPress() {
+        this.handleValidKeyPress('LEGACY');
+    }
+
+    resetKeyTracking() {
+        // Clear all pressed keys and reset timing
+        this.pressedKeys.clear();
+        this.lastValidKeyTime = 0;
     }
 
     getPlayerName() {
@@ -858,6 +915,9 @@ class KeyboardBreaker {
 
         this.updatePlayerHealthBars(battleState.players);
         this.updateBattleLeaderboard(battleState.players);
+
+        // Update target display
+        this.updateTargetDisplay(battleState.playerTargets, battleState.players);
     }
 
     updateBattleTimer(timeLeft) {
@@ -896,6 +956,9 @@ class KeyboardBreaker {
         wordEl.className = 'word-target';
         wordEl.id = `word-${wordData.id}`;
 
+        // Check if this word belongs to the current player
+        const isMyWord = wordData.ownerId === this.playerId;
+
         // Show word with length-based coloring for damage indication
         const damageColor = this.getWordDamageColor(wordData.length);
         wordEl.style.background = damageColor;
@@ -903,8 +966,27 @@ class KeyboardBreaker {
         wordEl.style.left = `${wordData.position.x}%`;
         wordEl.style.top = `${wordData.position.y}%`;
 
-        // Store word in available words map
-        this.availableWords.set(wordData.text.toLowerCase(), wordData);
+        // Style differently for owned vs non-owned words
+        if (isMyWord) {
+            // This word belongs to the current player - make it glow and more prominent
+            wordEl.style.boxShadow = '0 0 15px rgba(0, 255, 127, 0.8)';
+            wordEl.style.border = '2px solid #00FF7F';
+            wordEl.style.fontWeight = 'bold';
+            wordEl.style.transform = 'scale(1.1)';
+            wordEl.style.zIndex = '20';
+
+            // Store word in available words map (only owned words can be typed)
+            this.availableWords.set(wordData.text.toLowerCase(), wordData);
+        } else {
+            // This word belongs to another player - make it dimmed
+            wordEl.style.opacity = '0.6';
+            wordEl.style.filter = 'grayscale(50%)';
+            wordEl.style.border = '1px solid rgba(255,255,255,0.3)';
+
+            // Add a small icon to indicate it's not typeable
+            wordEl.style.position = 'relative';
+            wordEl.setAttribute('data-owner', 'other');
+        }
 
         container.appendChild(wordEl);
     }
@@ -1125,6 +1207,45 @@ class KeyboardBreaker {
             // Show elimination message to the eliminated player
             document.getElementById('currentWordDisplay').textContent = '💀 You have been eliminated!';
             document.getElementById('currentWordDisplay').style.color = '#e74c3c';
+        }
+    }
+
+    updateTargetDisplay(playerTargets, players) {
+        const targetDisplay = document.getElementById('targetDisplay');
+        const currentTargetElement = document.getElementById('currentTarget');
+
+        if (!targetDisplay || !currentTargetElement || !playerTargets) {
+            return;
+        }
+
+        // If player is eliminated, hide target display
+        if (this.isEliminated) {
+            targetDisplay.style.display = 'none';
+            return;
+        }
+
+        // Find current player's target
+        const myTargetId = playerTargets[this.playerId];
+
+        if (myTargetId) {
+            // Find the target player's info
+            const targetPlayer = players.find(p => p.id === myTargetId);
+
+            if (targetPlayer && targetPlayer.health > 0) {
+                targetDisplay.style.display = 'block';
+                currentTargetElement.textContent = `${targetPlayer.icon} ${targetPlayer.name}`;
+                currentTargetElement.style.color = '#00FF7F'; // Green for alive target
+            } else {
+                // Target is dead or not found
+                targetDisplay.style.display = 'block';
+                currentTargetElement.textContent = 'Target eliminated';
+                currentTargetElement.style.color = '#e74c3c'; // Red
+            }
+        } else {
+            // No target assigned
+            targetDisplay.style.display = 'block';
+            currentTargetElement.textContent = 'No target assigned';
+            currentTargetElement.style.color = '#FFD700'; // Gold
         }
     }
 }
