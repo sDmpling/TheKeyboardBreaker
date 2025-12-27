@@ -150,28 +150,28 @@ class GameRoom {
 
         if (alivePlayerIds.length === 0) return null;
 
-        // For single player or testing, assign words to any player
-        const wordOwnerId = alivePlayerIds[Math.floor(Math.random() * alivePlayerIds.length)];
+        // Ensure circular targeting is initialized
+        if (this.playerTargets.size === 0 || this.playerTargets.size !== alivePlayerIds.length) {
+            this.initializeCircularTargets();
+        }
 
+        let wordOwnerId = null;
         let targetPlayerId = null;
 
         if (alivePlayerIds.length >= 2) {
-            // Multiple players - use circular targeting
+            // Multiple players - select a random attacker, then get their target
+            wordOwnerId = alivePlayerIds[Math.floor(Math.random() * alivePlayerIds.length)];
             targetPlayerId = this.getPlayerTarget(wordOwnerId);
-        } else {
-            // Single player - target themselves (for testing)
-            targetPlayerId = wordOwnerId;
-        }
 
-        // Fallback: if no target found, assign to any other player or self
-        if (!targetPlayerId) {
-            if (alivePlayerIds.length >= 2) {
-                // Find someone other than the owner
-                const otherPlayers = alivePlayerIds.filter(id => id !== wordOwnerId);
-                targetPlayerId = otherPlayers[Math.floor(Math.random() * otherPlayers.length)] || wordOwnerId;
-            } else {
-                targetPlayerId = wordOwnerId;
+            // If no target found, reinitialize and try again
+            if (!targetPlayerId) {
+                this.initializeCircularTargets();
+                targetPlayerId = this.getPlayerTarget(wordOwnerId);
             }
+        } else {
+            // Single player - they attack themselves (for testing)
+            wordOwnerId = alivePlayerIds[0];
+            targetPlayerId = wordOwnerId;
         }
 
         const wordData = {
@@ -189,7 +189,16 @@ class GameRoom {
         };
 
         this.currentWords.set(wordData.id, wordData);
-        console.log(`Generated word: "${word}" (ID: ${wordData.id}) - Owner: ${wordOwnerId}, Target: ${targetPlayerId}`);
+
+        // Debug logging for targeting
+        const ownerName = this.players.get(wordOwnerId)?.name || 'Unknown';
+        const targetName = this.players.get(targetPlayerId)?.name || 'Unknown';
+        console.log(`Generated word: "${word}" (ID: ${wordData.id})`);
+        console.log(`  → ${ownerName} (${wordOwnerId}) attacks ${targetName} (${targetPlayerId})`);
+        console.log(`  → Current targets:`, Array.from(this.playerTargets.entries()).map(([a, t]) =>
+            `${this.players.get(a)?.name} → ${this.players.get(t)?.name}`
+        ));
+
         return wordData;
     }
 

@@ -777,7 +777,7 @@ class KeyboardBreaker {
         }
 
         // Show appropriate controls based on whether user is host
-        if (hostControls && this.isRoomOwner) {
+        if (hostControls && this.isOwner) {
             hostControlsDiv.classList.remove('hidden');
             waitingDiv.classList.add('hidden');
             autoRestartDiv.classList.add('hidden');

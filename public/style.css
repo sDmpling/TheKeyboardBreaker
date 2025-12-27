@@ -1145,11 +1145,12 @@ h1 {
 
 /* Winner Modal Styles */
 .winner-modal-content {
-    max-width: 500px;
+    max-width: 400px;
     text-align: center;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: 3px solid #FFD700;
     animation: modalPopIn 0.5s ease-out;
+    padding: 20px; /* Reduce padding for more compact size */
 }
 
 @keyframes modalPopIn {
@@ -1164,12 +1165,12 @@ h1 {
 }
 
 .winner-announcement {
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 .winner-trophy {
-    font-size: 4rem;
-    margin-bottom: 10px;
+    font-size: 3rem;
+    margin-bottom: 5px;
     animation: bounce 1s infinite;
 }
 
@@ -1187,8 +1188,8 @@ h1 {
 
 #winnerTitle {
     color: #FFD700;
-    font-size: 2.5rem;
-    margin: 15px 0;
+    font-size: 2rem;
+    margin: 10px 0;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     animation: glow 2s ease-in-out infinite alternate;
 }
@@ -1228,12 +1229,12 @@ h1 {
 }
 
 .winner-stats {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #E0E0E0;
-    margin: 15px 0;
+    margin: 10px 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 5px;
 }
 
 .stat-item {
