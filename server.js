@@ -143,17 +143,35 @@ class GameRoom {
         const wordList = battleWords[`length${wordLength}`];
         const word = wordList[Math.floor(Math.random() * wordList.length)];
 
-        // For circular targeting, we need to assign this word to a specific attacker-target pair
-        // Get a random alive player who will be the "owner" of this word
+        // Get alive players
         const alivePlayerIds = Array.from(this.players.keys())
             .filter(id => this.players.get(id).health > 0);
 
-        if (alivePlayerIds.length < 2) return null;
+        if (alivePlayerIds.length === 0) return null;
 
+        // For single player or testing, assign words to any player
         const wordOwnerId = alivePlayerIds[Math.floor(Math.random() * alivePlayerIds.length)];
-        const targetPlayerId = this.getPlayerTarget(wordOwnerId);
 
-        if (!targetPlayerId) return null;
+        let targetPlayerId = null;
+
+        if (alivePlayerIds.length >= 2) {
+            // Multiple players - use circular targeting
+            targetPlayerId = this.getPlayerTarget(wordOwnerId);
+        } else {
+            // Single player - target themselves (for testing)
+            targetPlayerId = wordOwnerId;
+        }
+
+        // Fallback: if no target found, assign to any other player or self
+        if (!targetPlayerId) {
+            if (alivePlayerIds.length >= 2) {
+                // Find someone other than the owner
+                const otherPlayers = alivePlayerIds.filter(id => id !== wordOwnerId);
+                targetPlayerId = otherPlayers[Math.floor(Math.random() * otherPlayers.length)] || wordOwnerId;
+            } else {
+                targetPlayerId = wordOwnerId;
+            }
+        }
 
         const wordData = {
             id: ++this.wordId,
@@ -170,6 +188,7 @@ class GameRoom {
         };
 
         this.currentWords.set(wordData.id, wordData);
+        console.log(`Generated word: "${word}" (ID: ${wordData.id}) - Owner: ${wordOwnerId}, Target: ${targetPlayerId}`);
         return wordData;
     }
 
@@ -208,17 +227,23 @@ class GameRoom {
         const alivePlayerIds = Array.from(this.players.keys())
             .filter(id => this.players.get(id).health > 0);
 
-        if (alivePlayerIds.length < 2) return;
+        if (alivePlayerIds.length === 0) return;
 
         // Create circular targeting order
         this.targetingOrder = [...alivePlayerIds];
         this.playerTargets.clear();
 
-        // Set up circular targeting: each player targets the next one
-        for (let i = 0; i < alivePlayerIds.length; i++) {
-            const attackerId = alivePlayerIds[i];
-            const targetId = alivePlayerIds[(i + 1) % alivePlayerIds.length]; // Circular
-            this.playerTargets.set(attackerId, targetId);
+        if (alivePlayerIds.length === 1) {
+            // Single player mode - target themselves for testing
+            const playerId = alivePlayerIds[0];
+            this.playerTargets.set(playerId, playerId);
+        } else {
+            // Set up circular targeting: each player targets the next one
+            for (let i = 0; i < alivePlayerIds.length; i++) {
+                const attackerId = alivePlayerIds[i];
+                const targetId = alivePlayerIds[(i + 1) % alivePlayerIds.length]; // Circular
+                this.playerTargets.set(attackerId, targetId);
+            }
         }
 
         console.log('Initialized circular targets:', Array.from(this.playerTargets.entries()));
@@ -290,10 +315,18 @@ class GameRoom {
         const player = this.players.get(playerId);
         if (!player) return null;
 
-        // Check if this word belongs to the player (circular targeting)
-        // Only the word owner can type this word for damage
-        if (foundWord.ownerId && foundWord.ownerId !== playerId) {
+        // Allow word completion in the following cases:
+        // 1. Word has no owner (fallback words)
+        // 2. Word belongs to this player (intended owner)
+        // 3. Single player mode (for testing)
+        const alivePlayerCount = Array.from(this.players.values()).filter(p => p.health > 0).length;
+        const canComplete = !foundWord.ownerId ||
+                           foundWord.ownerId === playerId ||
+                           alivePlayerCount <= 1;
+
+        if (!canComplete) {
             // This word doesn't belong to this player - ignore the completion
+            console.log(`Player ${playerId} tried to complete word "${wordText}" owned by ${foundWord.ownerId}`);
             return null;
         }
 
@@ -1345,7 +1378,7 @@ function broadcastBattleState(room) {
 }
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚂 Keyboard Breaker server running on port ${PORT}`);
     console.log(`🌐 Open http://localhost:${PORT} to play!`);

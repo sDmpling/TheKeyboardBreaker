@@ -966,7 +966,10 @@ class KeyboardBreaker {
         wordEl.style.left = `${wordData.position.x}%`;
         wordEl.style.top = `${wordData.position.y}%`;
 
-        // Style differently for owned vs non-owned words
+        // Store word in available words map (all words can be typed now)
+        this.availableWords.set(wordData.text.toLowerCase(), wordData);
+
+        // Style differently for owned vs non-owned words (visual indication only)
         if (isMyWord) {
             // This word belongs to the current player - make it glow and more prominent
             wordEl.style.boxShadow = '0 0 15px rgba(0, 255, 127, 0.8)';
@@ -974,16 +977,10 @@ class KeyboardBreaker {
             wordEl.style.fontWeight = 'bold';
             wordEl.style.transform = 'scale(1.1)';
             wordEl.style.zIndex = '20';
-
-            // Store word in available words map (only owned words can be typed)
-            this.availableWords.set(wordData.text.toLowerCase(), wordData);
         } else {
-            // This word belongs to another player - make it dimmed
-            wordEl.style.opacity = '0.6';
-            wordEl.style.filter = 'grayscale(50%)';
-            wordEl.style.border = '1px solid rgba(255,255,255,0.3)';
-
-            // Add a small icon to indicate it's not typeable
+            // This word belongs to another player - make it slightly dimmed but still typeable
+            wordEl.style.opacity = '0.8';
+            wordEl.style.border = '1px solid rgba(255,255,255,0.5)';
             wordEl.style.position = 'relative';
             wordEl.setAttribute('data-owner', 'other');
         }

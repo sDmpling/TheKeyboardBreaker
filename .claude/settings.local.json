@@ -12,7 +12,10 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(npm install -g @railway/cli)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(git remote set-url:*)",
+      "Bash(set PORT=3001)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []
