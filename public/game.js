@@ -144,6 +144,10 @@ class KeyboardBreaker {
             this.socket.emit('startGame');
         });
 
+        document.getElementById('shareRoomBtn').addEventListener('click', () => {
+            this.showShareRoomModal();
+        });
+
         document.getElementById('leaveLobbyBtn').addEventListener('click', () => {
             this.socket.emit('leaveRoom');
         });
@@ -174,10 +178,30 @@ class KeyboardBreaker {
             this.socket.emit('removeAI');
         });
 
+        // Share modal functionality
+        document.getElementById('closeShareModalBtn').addEventListener('click', () => {
+            this.hideShareRoomModal();
+        });
+
+        document.getElementById('copyRoomCodeBtn').addEventListener('click', () => {
+            const roomCode = document.getElementById('shareRoomCode').value;
+            this.copyToClipboard(roomCode, 'copyRoomCodeBtn');
+        });
+
+        document.getElementById('copyRoomLinkBtn').addEventListener('click', () => {
+            const roomLink = document.getElementById('shareRoomLink').value;
+            this.copyToClipboard(roomLink, 'copyRoomLinkBtn');
+        });
+
         // Auto-uppercase room code input
         document.getElementById('roomCode').addEventListener('input', (e) => {
             e.target.value = e.target.value.toUpperCase();
         });
+
+        // Check for URL-based room joining on load
+        setTimeout(() => {
+            this.checkUrlJoin();
+        }, 100);
     }
 
     setupSocketListeners() {
@@ -498,8 +522,12 @@ class KeyboardBreaker {
         document.getElementById('lobbyMaxPlayers').textContent = this.currentRoom.maxPlayers;
 
         const startBtn = document.getElementById('startGameBtn');
+        const shareBtn = document.getElementById('shareRoomBtn');
         const waitingMsg = document.querySelector('.waiting-message');
         const aiControls = document.getElementById('aiControls');
+
+        // Share button is always visible in lobby
+        shareBtn.classList.remove('hidden');
 
         if (this.isOwner) {
             // Show AI controls for room owner
@@ -868,6 +896,86 @@ class KeyboardBreaker {
         this.currentRoom = null;
         this.isOwner = false;
         this.gameActive = false;
+    }
+
+    showShareRoomModal() {
+        if (!this.currentRoom) return;
+
+        const modal = document.getElementById('shareRoomModal');
+        const roomCodeInput = document.getElementById('shareRoomCode');
+        const roomLinkInput = document.getElementById('shareRoomLink');
+
+        // Fill in the room information
+        roomCodeInput.value = this.currentRoom.roomCode;
+
+        // Create the quick join URL
+        const baseUrl = window.location.origin + window.location.pathname;
+        const joinUrl = `${baseUrl}?join=${this.currentRoom.roomCode}`;
+        roomLinkInput.value = joinUrl;
+
+        modal.classList.remove('hidden');
+    }
+
+    hideShareRoomModal() {
+        const modal = document.getElementById('shareRoomModal');
+        modal.classList.add('hidden');
+    }
+
+    copyToClipboard(text, buttonId) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Show feedback
+            const button = document.getElementById(buttonId);
+            const originalText = button.textContent;
+            button.textContent = '✅ Copied!';
+            button.style.backgroundColor = '#27ae60';
+
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.backgroundColor = '';
+            }, 2000);
+        }).catch(err => {
+            // Fallback for older browsers
+            console.warn('Could not copy to clipboard:', err);
+            alert('Press Ctrl+C to copy');
+        });
+    }
+
+    // Check if user joined via URL
+    checkUrlJoin() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinCode = urlParams.get('join');
+
+        if (joinCode) {
+            // User clicked a join link - show simplified join modal
+            this.showQuickJoinModal(joinCode);
+            // Clear the URL parameter
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
+    showQuickJoinModal(roomCode) {
+        const playerName = this.getPlayerName();
+
+        // Skip modal if we already have a player name
+        if (playerName) {
+            this.socket.emit('joinRoom', {
+                roomCode: roomCode.toUpperCase(),
+                playerName
+            });
+            return;
+        }
+
+        // Show simplified join modal for quick join
+        const modal = document.getElementById('joinRoomModal');
+        document.getElementById('roomCode').value = roomCode.toUpperCase();
+        document.getElementById('joinPlayerName').value = '';
+        document.getElementById('joinPlayerName').placeholder = 'Enter your name to join';
+        modal.classList.remove('hidden');
+
+        // Focus on name input
+        setTimeout(() => {
+            document.getElementById('joinPlayerName').focus();
+        }, 100);
     }
 
     startAutoRestartCountdown() {

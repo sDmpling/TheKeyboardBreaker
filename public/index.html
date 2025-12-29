@@ -137,6 +137,7 @@
 
                 <div class="lobby-actions">
                     <button id="startGameBtn" class="btn primary large hidden">🚀 Start Game</button>
+                    <button id="shareRoomBtn" class="btn secondary hidden">📋 Share Room</button>
 
                     <!-- AI Controls (only visible to room owner) -->
                     <div id="aiControls" class="ai-controls hidden">
@@ -377,6 +378,47 @@
                         🏠 Return to Main Menu
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Room Modal -->
+    <div id="shareRoomModal" class="modal hidden">
+        <div class="modal-content share-modal-content">
+            <div class="share-header">
+                <h2>📋 Share Room</h2>
+                <p>Share this link with friends so they can join quickly!</p>
+            </div>
+
+            <div class="share-content">
+                <div class="share-section">
+                    <label>Room Code:</label>
+                    <div class="copy-section">
+                        <input type="text" id="shareRoomCode" readonly>
+                        <button id="copyRoomCodeBtn" class="btn primary small">📋 Copy</button>
+                    </div>
+                </div>
+
+                <div class="share-section">
+                    <label>Quick Join Link:</label>
+                    <div class="copy-section">
+                        <input type="text" id="shareRoomLink" readonly>
+                        <button id="copyRoomLinkBtn" class="btn primary small">📋 Copy</button>
+                    </div>
+                </div>
+
+                <div class="share-info">
+                    <p><strong>How to use:</strong></p>
+                    <ul>
+                        <li>Share the <strong>Room Code</strong> for manual entry</li>
+                        <li>Share the <strong>Quick Join Link</strong> for instant access</li>
+                        <li>Friends just need to enter their name and they're in!</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="share-actions">
+                <button id="closeShareModalBtn" class="btn secondary">✖️ Close</button>
             </div>
         </div>
     </div>
