@@ -1011,6 +1011,11 @@ class KeyboardBreaker {
 
     addWordTarget(wordData) {
         const container = document.getElementById('wordTargets');
+        if (!container) {
+            console.error('Word targets container not found!');
+            return;
+        }
+
         const wordEl = document.createElement('div');
         wordEl.className = 'word-target';
         wordEl.id = `word-${wordData.id}`;
@@ -1022,8 +1027,13 @@ class KeyboardBreaker {
         const damageColor = this.getWordDamageColor(wordData.length);
         wordEl.style.background = damageColor;
         wordEl.textContent = wordData.text;
+
+        // Ensure positioning is set explicitly
+        wordEl.style.position = 'absolute';
         wordEl.style.left = `${wordData.position.x}%`;
         wordEl.style.top = `${wordData.position.y}%`;
+
+        console.log(`Adding word "${wordData.text}" at position ${wordData.position.x}%, ${wordData.position.y}%`);
 
         // Store word in available words map (all words can be typed now)
         this.availableWords.set(wordData.text.toLowerCase(), wordData);

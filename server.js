@@ -1269,6 +1269,17 @@ function startBattleGame(room) {
         }
     }, 1000);
 
+    // Generate initial words to ensure immediate gameplay
+    setTimeout(() => {
+        for (let i = 0; i < 2; i++) {
+            const initialWord = room.generateWord();
+            if (initialWord) {
+                io.to(room.roomCode).emit('newWord', initialWord);
+                console.log(`Generated initial word: ${initialWord.text}`);
+            }
+        }
+    }, 1000); // 1 second delay to let players load
+
     // Start word generation and battle loop
     battleGameLoop(room);
 }
@@ -1278,11 +1289,20 @@ function battleGameLoop(room) {
 
     const currentTime = Date.now();
 
-    // Generate new words periodically
-    if (room.currentWords.size < 3 && Math.random() < 0.3) {
-        const newWord = room.generateWord();
-        if (newWord) {
-            io.to(room.roomCode).emit('newWord', newWord);
+    // Generate new words more consistently
+    const maxWords = Math.min(5, room.players.size * 2); // Scale with player count
+    const shouldGenerateWord = room.currentWords.size < maxWords;
+
+    if (shouldGenerateWord) {
+        // More frequent generation with some randomness
+        const generateChance = room.currentWords.size === 0 ? 1.0 : 0.7; // Always generate if no words, 70% otherwise
+
+        if (Math.random() < generateChance) {
+            const newWord = room.generateWord();
+            if (newWord) {
+                console.log(`Emitting new word to room ${room.roomCode}:`, newWord.text);
+                io.to(room.roomCode).emit('newWord', newWord);
+            }
         }
     }
 
@@ -1313,10 +1333,11 @@ function battleGameLoop(room) {
         }
     });
 
-    // Remove old words (timeout after 10 seconds)
+    // Remove old words (timeout after 15 seconds for better visibility)
     const now = Date.now();
     for (const [wordId, word] of room.currentWords.entries()) {
-        if (now - word.createdAt > 10000) {
+        if (now - word.createdAt > 15000) {
+            console.log(`Word "${word.text}" (ID: ${wordId}) expired after 15 seconds`);
             room.currentWords.delete(wordId);
             io.to(room.roomCode).emit('wordExpired', wordId);
         }
