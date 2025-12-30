@@ -288,9 +288,16 @@
             </div>
             <input type="text" id="typingInput" class="typing-input" placeholder="Type any word above..." autocomplete="off" spellcheck="false">
             <div class="typing-stats">
-                <div class="wpm">WPM: <span id="wpmCounter">0</span></div>
-                <div class="accuracy">Accuracy: <span id="accuracyCounter">100%</span></div>
-                <div class="hits">Hits: <span id="hitCounter">0</span></div>
+                <!-- Race mode stats -->
+                <div class="race-stat">WPM: <span id="wpmCounter">0</span></div>
+                <div class="race-stat">Accuracy: <span id="accuracyCounter">100%</span></div>
+                <div class="race-stat">Hits: <span id="hitCounter">0</span></div>
+
+                <!-- Battle mode stats -->
+                <div class="battle-stat">💀 Eliminations: <span id="myEliminations">0</span></div>
+                <div class="battle-stat">⚔️ Damage Dealt: <span id="myDamageDealt">0</span></div>
+                <div class="battle-stat">📝 Words Typed: <span id="myWordsTyped">0</span></div>
+                <div class="battle-stat">🎯 Accuracy: <span id="myAccuracy">100</span>%</div>
             </div>
             <div class="damage-legend">
                 <small>
@@ -334,8 +341,8 @@
                         <span id="winnerDamage">0</span>
                     </div>
                     <div class="stat-item battle-stat">
-                        <span class="stat-label">⌨️ Words Per Minute:</span>
-                        <span id="winnerWPM">0</span>
+                        <span class="stat-label">📝 Words Typed:</span>
+                        <span id="winnerWordsTyped">0</span>
                     </div>
                     <div class="stat-item battle-stat">
                         <span class="stat-label">🎯 Accuracy:</span>

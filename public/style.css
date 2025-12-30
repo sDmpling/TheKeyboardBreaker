@@ -709,7 +709,11 @@ body {
     text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
     z-index: 10;
     white-space: nowrap;
-    min-width: fit-content;
+    max-width: 150px; /* Prevent overly wide containers */
+    min-width: 60px;  /* Minimum width for small words */
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis; /* In case of extremely long words */
 }
 
 /* .word-target.typing removed - no longer selecting individual words for typing */
@@ -1282,6 +1286,39 @@ h1 {
 /* Show battle stats when in battle mode */
 .battle-mode .battle-stat {
     display: flex;
+}
+
+/* Personal stats display */
+.typing-stats {
+    display: flex;
+    gap: 15px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+.race-stat, .battle-stat {
+    background: rgba(0,0,0,0.3);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.race-stat {
+    display: block; /* Show by default for race mode */
+}
+
+.battle-stat {
+    display: none; /* Hidden by default for race mode */
+}
+
+/* In battle mode, show battle stats and hide race stats */
+.battle-screen .battle-stat {
+    display: block;
+}
+
+.battle-screen .race-stat {
+    display: none;
 }
 
 .host-controls {

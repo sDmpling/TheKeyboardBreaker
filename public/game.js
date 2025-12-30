@@ -597,6 +597,9 @@ class KeyboardBreaker {
 
         this.updatePlayerPositions(gameState.players);
         this.updateLeaderboard(gameState.leaderboard);
+
+        // Update current player's personal stats for race mode
+        this.updatePersonalStats(gameState.players || []);
     }
 
     showRateLimitFeedback() {
@@ -796,7 +799,7 @@ class KeyboardBreaker {
             winnerKeyCount.textContent = winner.hits || 0;
             document.getElementById('winnerEliminations').textContent = winner.eliminations || 0;
             document.getElementById('winnerDamage').textContent = winner.damageDealt || 0;
-            document.getElementById('winnerWPM').textContent = winner.wpm || 0;
+            document.getElementById('winnerWordsTyped').textContent = winner.wordsTyped || 0;
             document.getElementById('winnerAccuracy').textContent = winner.accuracy || 100;
         } else {
             // Race mode statistics
@@ -1082,6 +1085,9 @@ class KeyboardBreaker {
 
         this.updatePlayerHealthBars(battleState.players);
         this.updateBattleLeaderboard(battleState.players);
+
+        // Update current player's personal stats
+        this.updatePersonalStats(battleState.players);
 
         // Update target display
         this.updateTargetDisplay(battleState.playerTargets, battleState.players);
@@ -1420,6 +1426,53 @@ class KeyboardBreaker {
             targetDisplay.style.display = 'block';
             currentTargetElement.textContent = 'No target assigned';
             currentTargetElement.style.color = '#FFD700'; // Gold
+        }
+    }
+
+    updatePersonalStats(players) {
+        // Find the current player's data
+        const currentPlayer = players.find(player => player.id === this.playerId);
+        if (!currentPlayer) return;
+
+        // Update battle mode personal stats
+        const myEliminations = document.getElementById('myEliminations');
+        const myDamageDealt = document.getElementById('myDamageDealt');
+        const myWordsTyped = document.getElementById('myWordsTyped');
+        const myAccuracy = document.getElementById('myAccuracy');
+
+        if (myEliminations) {
+            myEliminations.textContent = currentPlayer.eliminations || 0;
+        }
+
+        if (myDamageDealt) {
+            myDamageDealt.textContent = currentPlayer.damageDealt || 0;
+        }
+
+        if (myWordsTyped) {
+            myWordsTyped.textContent = currentPlayer.hits || 0;
+        }
+
+        if (myAccuracy) {
+            // Calculate accuracy as a percentage
+            const accuracy = currentPlayer.accuracy || 100;
+            myAccuracy.textContent = Math.round(accuracy);
+        }
+
+        // Update race mode personal stats too
+        const wpmCounter = document.getElementById('wpmCounter');
+        const accuracyCounter = document.getElementById('accuracyCounter');
+        const hitCounter = document.getElementById('hitCounter');
+
+        if (wpmCounter && currentPlayer.wpm !== undefined) {
+            wpmCounter.textContent = Math.round(currentPlayer.wpm || 0);
+        }
+
+        if (accuracyCounter && currentPlayer.accuracy !== undefined) {
+            accuracyCounter.textContent = Math.round(currentPlayer.accuracy || 100) + '%';
+        }
+
+        if (hitCounter && currentPlayer.hits !== undefined) {
+            hitCounter.textContent = currentPlayer.hits || 0;
         }
     }
 }
