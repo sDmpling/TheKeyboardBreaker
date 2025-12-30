@@ -1289,19 +1289,22 @@ function battleGameLoop(room) {
 
     const currentTime = Date.now();
 
-    // Generate new words more consistently
-    const maxWords = Math.min(5, room.players.size * 2); // Scale with player count
+    // Generate new words more consistently and with better frequency
+    const alivePlayerCount = Array.from(room.players.values()).filter(p => p.health > 0).length;
+    const maxWords = Math.min(8, Math.max(3, alivePlayerCount * 2)); // Ensure minimum 3 words, scale with alive players
     const shouldGenerateWord = room.currentWords.size < maxWords;
 
     if (shouldGenerateWord) {
-        // More frequent generation with some randomness
-        const generateChance = room.currentWords.size === 0 ? 1.0 : 0.7; // Always generate if no words, 70% otherwise
+        // More frequent generation with high probability
+        const generateChance = room.currentWords.size === 0 ? 1.0 : 0.85; // Always generate if no words, 85% otherwise
 
         if (Math.random() < generateChance) {
             const newWord = room.generateWord();
             if (newWord) {
-                console.log(`Emitting new word to room ${room.roomCode}:`, newWord.text);
+                console.log(`[${room.roomCode}] Generated word: ${newWord.text} (${room.currentWords.size}/${maxWords} total words, ${alivePlayerCount} alive players)`);
                 io.to(room.roomCode).emit('newWord', newWord);
+            } else {
+                console.log(`[${room.roomCode}] Failed to generate word - no alive players or targeting issue`);
             }
         }
     }
@@ -1348,7 +1351,7 @@ function battleGameLoop(room) {
 
     // Continue battle loop
     if (room.gameActive) {
-        setTimeout(() => battleGameLoop(room), 1000); // 1 FPS for battle updates
+        setTimeout(() => battleGameLoop(room), 500); // 2 FPS for battle updates - better responsiveness
     }
 }
 

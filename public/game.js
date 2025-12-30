@@ -339,6 +339,7 @@ class KeyboardBreaker {
         this.socket.on('battleEnded', (data) => {
             this.gameActive = false;
             this.resetKeyTracking(); // Clear key tracking when battle ends
+            this.cleanupBattleMode(); // Clear battle-specific intervals
             this.updateBattleStatus(`🏆 ${data.winner.name} wins the battle!`, '#FFD700');
             this.celebrateWinner(data.winner.id);
             this.showWinnerModal(data.winner, data.hostControls);
@@ -1034,6 +1035,7 @@ class KeyboardBreaker {
     // Battle Mode Methods
     initBattleMode() {
         this.availableWords = new Map(); // Track all available words
+        this.pendingWords = new Set(); // Track words pending completion
         this.typingStartTime = Date.now();
         this.isEliminated = false; // Reset elimination status for new battle
 
@@ -1058,8 +1060,24 @@ class KeyboardBreaker {
                 // Allow normal typing behavior for all other keys
             });
 
+            // Ensure input stays focused during battle
+            newTypingInput.addEventListener('blur', () => {
+                if (this.gameActive && this.currentRoom && this.currentRoom.gameMode === 'battle' && !this.isEliminated) {
+                    setTimeout(() => newTypingInput.focus(), 100);
+                }
+            });
+
             // Clear the input field
             newTypingInput.value = '';
+
+            // Set up periodic focus maintenance for battle mode
+            if (this.currentRoom && this.currentRoom.gameMode === 'battle') {
+                this.focusInterval = setInterval(() => {
+                    if (this.gameActive && !this.isEliminated && document.activeElement !== newTypingInput) {
+                        newTypingInput.focus();
+                    }
+                }, 2000); // Check every 2 seconds
+            }
         }
 
         // Update display
@@ -1186,8 +1204,13 @@ class KeyboardBreaker {
         const wordEl = document.getElementById(`word-${wordId}`);
         if (wordEl) {
             // Remove from available words map
-            const wordText = wordEl.textContent.toLowerCase();
+            const wordText = wordEl.textContent.toLowerCase().replace(' ✓', ''); // Remove checkmark if present
             this.availableWords.delete(wordText);
+
+            // Also remove from pending words
+            if (this.pendingWords) {
+                this.pendingWords.delete(wordText);
+            }
 
             wordEl.classList.add('missed');
             setTimeout(() => {
@@ -1209,6 +1232,11 @@ class KeyboardBreaker {
         let exactMatch = false;
 
         for (const [wordText, wordData] of this.availableWords.entries()) {
+            // Skip words that are pending completion
+            if (this.pendingWords && this.pendingWords.has(wordText)) {
+                continue;
+            }
+
             if (wordText === input) {
                 // Exact match - ready to complete
                 exactMatch = true;
@@ -1244,7 +1272,7 @@ class KeyboardBreaker {
 
         const inputValue = typingInput.value.trim().toLowerCase();
 
-        if (this.availableWords.has(inputValue)) {
+        if (this.availableWords.has(inputValue) && (!this.pendingWords || !this.pendingWords.has(inputValue))) {
             const wordData = this.availableWords.get(inputValue);
 
             // Send completion to server
@@ -1253,17 +1281,21 @@ class KeyboardBreaker {
                 timeTaken: Date.now() - this.typingStartTime
             });
 
-            // Mark word as completed visually
+            // Mark word as pending completion (visual feedback only)
             const wordEl = document.getElementById(`word-${wordData.id}`);
             if (wordEl) {
-                wordEl.classList.add('completed');
-                setTimeout(() => {
-                    wordEl.remove();
-                }, 500);
+                wordEl.style.opacity = '0.5';
+                wordEl.style.border = '2px solid #f39c12';
+                wordEl.textContent = wordData.text + ' ✓';
             }
 
-            // Remove from available words and clear input
-            this.availableWords.delete(inputValue);
+            // Store the word as pending to prevent re-typing
+            if (!this.pendingWords) {
+                this.pendingWords = new Set();
+            }
+            this.pendingWords.add(inputValue);
+
+            // Clear input but don't remove from available words yet (wait for server confirmation)
             typingInput.value = '';
             this.clearDirectTypingDisplay();
         }
@@ -1288,6 +1320,28 @@ class KeyboardBreaker {
     handleBattleAction(actionData) {
         if (actionData.type === 'attack') {
             this.showBattleEffect(actionData);
+
+            // If this action was by the current player, confirm word completion
+            if (actionData.attackerId === this.playerId && actionData.word) {
+                const completedWord = actionData.word.text.toLowerCase();
+
+                // Remove from pending words
+                if (this.pendingWords) {
+                    this.pendingWords.delete(completedWord);
+                }
+
+                // Remove from available words
+                this.availableWords.delete(completedWord);
+
+                // Remove the word element with success animation
+                const wordEl = document.getElementById(`word-${actionData.word.id}`);
+                if (wordEl) {
+                    wordEl.classList.add('completed');
+                    setTimeout(() => {
+                        wordEl.remove();
+                    }, 500);
+                }
+            }
         }
     }
 
@@ -1426,6 +1480,30 @@ class KeyboardBreaker {
             targetDisplay.style.display = 'block';
             currentTargetElement.textContent = 'No target assigned';
             currentTargetElement.style.color = '#FFD700'; // Gold
+        }
+    }
+
+    cleanupBattleMode() {
+        // Clear focus interval
+        if (this.focusInterval) {
+            clearInterval(this.focusInterval);
+            this.focusInterval = null;
+        }
+
+        // Clear available words and pending words
+        if (this.availableWords) {
+            this.availableWords.clear();
+        }
+        if (this.pendingWords) {
+            this.pendingWords.clear();
+        }
+
+        // Re-enable input if disabled
+        const typingInput = document.getElementById('typingInput');
+        if (typingInput) {
+            typingInput.disabled = false;
+            typingInput.style.background = '';
+            typingInput.style.borderColor = '';
         }
     }
 
